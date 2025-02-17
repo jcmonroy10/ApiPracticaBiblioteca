@@ -8,7 +8,7 @@ namespace ApiPracticaBiblioteca.Controllers
     [ApiController]
     public class LibroController : ControllerBase
     {
-       private readonly bibliotecaContext _bibliotecaContexto;
+        private readonly bibliotecaContext _bibliotecaContexto;
 
         public LibroController(bibliotecaContext bibliotecaContexto)
         {
@@ -36,7 +36,7 @@ namespace ApiPracticaBiblioteca.Controllers
             var libro = (from l in _bibliotecaContexto.Libro
                          join a in _bibliotecaContexto.Autor
                          on l.id_autor equals a.id_autor
-                         where l.id_libro == id 
+                         where l.id_libro == id
                          select new
                          {
                              l.id_libro,
@@ -46,7 +46,7 @@ namespace ApiPracticaBiblioteca.Controllers
                              l.resumen,
                              l.id_autor,
                              autor = a.nombre,
-                         }).FirstOrDefault(); 
+                         }).FirstOrDefault();
 
             if (libro == null)
             {
@@ -114,6 +114,86 @@ namespace ApiPracticaBiblioteca.Controllers
             return Ok(new { Autor = nombreAutor, CantidadDeLibros = cantidadLibros });
         }
 
+        //OTRAS CONSULTAS
+
+        //Obtener los Autores con Más Libros Publicados
+        [HttpGet]
+        [Route("autores-mas-libros")]
+        public IActionResult ObtenerAutoresConMasLibros()
+        {
+            var autores = _bibliotecaContexto.Autor
+                .Select(a => new
+                {
+                    a.nombre,
+                    CantidadLibros = _bibliotecaContexto.Libro.Count(l => l.id_autor == a.id_autor)
+                })
+                .OrderByDescending(a => a.CantidadLibros)
+                .ToList();
+
+            return Ok(autores);
+        }
+
+        //Obtener los Libros Más Recientes
+        [HttpGet]
+        [Route("libros-recientes")]
+        public IActionResult ObtenerLibrosMasRecientes()
+        {
+            var libros = _bibliotecaContexto.Libro
+                .OrderByDescending(l => l.anioPublicacion)
+                .Take(10) // Obtener los 10 más recientes
+                .ToList();
+
+            return Ok(libros);
+        }
+
+        //Cantidad Total de Libros por Año
+        [HttpGet]
+        [Route("cantidad-libros-por-anio")]
+        public IActionResult CantidadTotalDeLibrosPorAnio()
+        {
+            var librosPorAnio = _bibliotecaContexto.Libro
+                .GroupBy(l => l.anioPublicacion)
+                .Select(g => new { Anio = g.Key, Cantidad = g.Count() })
+                .OrderByDescending(l => l.Anio)
+                .ToList();
+
+            return Ok(librosPorAnio);
+        }
+
+        //Verificar si un Autor Tiene Libros Publicados
+        [HttpGet]
+        [Route("autor-tiene-libros/{idAutor}")]
+        public IActionResult VerificarSiAutorTieneLibros(int idAutor)
+        {
+            bool tieneLibros = _bibliotecaContexto.Libro.Any(l => l.id_autor == idAutor);
+
+            if (tieneLibros)
+            {
+                return Ok(new { AutorId = idAutor, Mensaje = "El autor tiene libros publicados." });
+            }
+            else
+            {
+                return Ok(new { AutorId = idAutor, Mensaje = "El autor no tiene libros publicados." });
+            }
+        }
+
+
+        //Obtener el Primer Libro Publicado de un Autor
+        [HttpGet]
+        [Route("primer-libro/{idAutor}")]
+        public IActionResult ObtenerPrimerLibroDeAutor(int idAutor)
+        {
+            var primerLibro = _bibliotecaContexto.Libro
+                .Where(l => l.id_autor == idAutor)
+                .OrderBy(l => l.anioPublicacion)
+                .FirstOrDefault();
+
+            if (primerLibro == null)
+                return NotFound("El autor no tiene libros registrados.");
+
+            return Ok(primerLibro);
+        }
+
 
         //Crear
         [HttpPost]
@@ -174,5 +254,8 @@ namespace ApiPracticaBiblioteca.Controllers
 
             return Ok(libro);
         }
+
+        
+
     }
 }
