@@ -56,21 +56,64 @@ namespace ApiPracticaBiblioteca.Controllers
             return Ok(libro);
         }
 
+        //Buscar por año de publicación
         [HttpGet]
-        [Route("Find/{filtro}")]
-        public IActionResult FindByAnio(string filtro)
+        [Route("FindByAnio/{anio}")]
+        public IActionResult FindByAnio(int anio)
         {
-            Libro? libro = _bibliotecaContexto.Libro
-                .Where(l => l.anioPublicacion.ToString().Contains(filtro)) 
-                .FirstOrDefault();
+            var libros = _bibliotecaContexto.Libro
+                .Where(l => l.anioPublicacion >= anio)
+                .ToList();
 
-            if (libro == null)
+            if (libros == null || libros.Count == 0)
             {
-                return NotFound();
+                return NotFound("No se encontraron libros publicados desde ese año en adelante.");
             }
 
-            return Ok(libro);
+            return Ok(libros);
         }
+
+        //Buscar por titulo del libro
+        [HttpGet]
+        [Route("FindByTitle/{titulo}")]
+        public IActionResult FindByTitle(string titulo)
+        {
+            var libros = _bibliotecaContexto.Libro
+                .Where(l => l.titulo.Contains(titulo))
+                .ToList();
+
+            if (libros == null || libros.Count == 0)
+            {
+                return NotFound("No se encontraron libros con ese título.");
+            }
+
+            return Ok(libros);
+        }
+
+        //Buscar por autor
+        [HttpGet]
+        [Route("CountByAuthor/{nombreAutor}")]
+        public IActionResult CountByAuthor(string nombreAutor)
+        {
+            var autor = _bibliotecaContexto.Autor
+                .FirstOrDefault(a => a.nombre == nombreAutor);
+
+            if (autor == null)
+            {
+                return NotFound($"No se encontró un autor con el nombre '{nombreAutor}'.");
+            }
+
+            int cantidadLibros = _bibliotecaContexto.Libro
+                .Count(l => l.id_autor == autor.id_autor);
+
+            if (cantidadLibros == 0)
+            {
+                return NotFound($"El autor '{nombreAutor}' no tiene libros registrados.");
+            }
+
+            return Ok(new { Autor = nombreAutor, CantidadDeLibros = cantidadLibros });
+        }
+
 
         //Crear
         [HttpPost]
